@@ -15,18 +15,26 @@ const BUILTIN = {
   7: ['融合ネメシス', 'アーティファクトネメシス', 'カットスロートネメシス'],
 };
 
-const P = { data: null, tf: null, editName: false };
+const P = { data: null, tf: null, editName: false, newTour: false, deckMode: '' };
+const DEFAULT_TOURS = ['Online Championship 2026 November 予選 Day1'];
 
 /* ---------------- 保存（このブラウザの中だけ） ---------------- */
 
 function initial() {
   const decks = [];
   for (const [k, list] of Object.entries(BUILTIN)) for (const n of list) decks.push({ id: uid(), cls: k, name: n });
-  return { decks, tours: [], sel: '', memo: false };
+  return { version: 2, decks, tours: DEFAULT_TOURS.map(n => ({ id: uid(), name: n, a: '', b: '', games: [] })), memo: false };
 }
 function load() {
-  try { const t = localStorage.getItem(KEY); if (t) return JSON.parse(t); } catch (e) {  }
-  return initial();
+  let d = null;
+  try { const t = localStorage.getItem(KEY); if (t) d = JSON.parse(t); } catch (e) { d = null; }
+  if (!d) return initial();
+  d.decks = d.decks || []; d.tours = d.tours || [];
+  if (!(d.version >= 2)) {
+    for (const n of DEFAULT_TOURS) if (!d.tours.some(t => t.name === n)) d.tours.unshift({ id: uid(), name: n, a: '', b: '', games: [] });
+    d.version = 2;
+  }
+  return d;
 }
 function save() {
   try { localStorage.setItem(KEY, JSON.stringify(P.data)); return true; }
@@ -54,19 +62,28 @@ const clsOpts = sel => '<option value=""></option>' + Object.entries(CLSN).map((
 
 /* ---------------- 画面 ---------------- */
 
-const curTour = () => P.data.tours.find(t => t.id === P.data.sel) || null;
+const curTour = () => { const m = /^#t=(.+)$/.exec(location.hash); return m ? P.data.tours.find(t => t.id === decodeURIComponent(m[1])) || null : null; };
 const blankTF = () => ({ id: '', o1: '', o2: '', op: '', ot: '', my: '', turn: '', result: '', memo: '' });
 const pickedCls = g => g.op === '1' ? g.o1 : g.op === '2' ? g.o2 : '';
 
 function render() {
   const t = curTour();
-  $('#app').innerHTML = `
-    <section>
-      ${P.data.tours.length ? `<div class="tours">${P.data.tours.map(x => `<button class="tour-tab ${x.id === P.data.sel ? 'on' : ''}" data-act="sel" data-id="${x.id}">${esc(x.name)}</button>`).join('')}</div>` : ''}
-      <div class="inline add-tour"><input class="text" id="new-name" placeholder="大会名"><button class="btn" data-act="add-tour">大会を追加</button></div>
-    </section>
-    ${t ? `<section>${tourHtml(t)}</section>` : ''}
-    <section>${decksHtml()}</section>`;
+  $('#app').innerHTML = t ? `<a class="back" href="#">大会一覧</a>${tourHtml(t)}` : `${toursHtml()}${decksHtml()}`;
+}
+
+function toursHtml() {
+  const card = t => {
+    const w = t.games.filter(g => g.result === 'win').length, l = t.games.filter(g => g.result === 'lose').length;
+    const mine = [t.a, t.b].map(deckName).filter(Boolean);
+    return `<a class="tour-card" href="#t=${encodeURIComponent(t.id)}"><span class="tc-name">${esc(t.name)}</span>
+      ${mine.length ? `<span class="tc-sub">${mine.map(esc).join('・')}</span>` : ''}
+      <span class="tc-sub">${t.games.length ? `${t.games.length}戦 ${w}勝${l}敗` : '試合なし'}</span></a>`;
+  };
+  return `<section>
+    <div class="sec-head"><h2>大会</h2>${P.newTour ? '' : '<button class="btn" data-act="tour-new">大会を追加</button>'}</div>
+    ${P.newTour ? `<div class="add-box"><input class="text" id="new-name" placeholder="大会名"><button class="btn primary" data-act="add-tour">追加</button><button class="btn" data-act="tour-new-cancel">キャンセル</button></div>` : ''}
+    ${P.data.tours.length ? `<div class="tour-cards">${[...P.data.tours].reverse().map(card).join('')}</div>` : '<p class="empty">大会がありません</p>'}
+  </section>`;
 }
 
 function tourHtml(t) {
@@ -106,14 +123,17 @@ function tourHtml(t) {
 }
 
 function decksHtml() {
-  const ds = liveDecks();
-  return `<details class="decks" ${P.decksOpen ? 'open' : ''}><summary>デッキタイプ</summary>
-    ${Object.entries(CLSN).map(([k, n]) => {
+  const ds = liveDecks(), del = P.deckMode === 'del', add = P.deckMode === 'add';
+  return `<section>
+    <div class="sec-head"><h2>デッキタイプ</h2>
+      <button class="btn ${add ? 'on' : ''}" data-act="deck-mode" data-v="add">追加</button>
+      <button class="btn ${del ? 'on' : ''}" data-act="deck-mode" data-v="del">${del ? '削除を終わる' : '削除'}</button></div>
+    ${add ? `<div class="add-box"><select id="nd-cls">${clsOpts(P.ndCls || '')}</select><input class="text" id="nd-name" placeholder="デッキ名"><button class="btn primary" data-act="deck-add">追加</button><button class="btn" data-act="deck-mode" data-v="add">閉じる</button></div>` : ''}
+    <div class="cls-grid ${del ? 'del-mode' : ''}">${Object.entries(CLSN).map(([k, n]) => {
       const xs = ds.filter(d => String(d.cls) === k);
-      return `<div class="deck-cls"><h4>${n}</h4><div class="deck-list">${xs.length ? xs.map(d => `<span>${esc(d.name)}<button class="link-btn" data-act="deck-del" data-id="${d.id}">削除</button></span>`).join('') : '<span class="muted">なし</span>'}</div></div>`;
-    }).join('')}
-    <div class="inline"><select id="nd-cls">${clsOpts('')}</select><input class="text" id="nd-name" placeholder="デッキ名"><button class="btn" data-act="deck-add">追加</button></div>
-  </details>`;
+      return `<div class="cls-card"><h3>${n}</h3><ul>${xs.length ? xs.map(d => `<li><span>${esc(d.name)}</span>${del ? `<button class="del-btn" data-act="deck-del" data-id="${d.id}">削除</button>` : ''}</li>`).join('') : '<li class="muted">なし</li>'}</ul></div>`;
+    }).join('')}</div>
+  </section>`;
 }
 
 /* ---------------- 入力 ---------------- */
@@ -138,16 +158,17 @@ document.addEventListener('click', e => {
   const b = e.target.closest('[data-act]'); if (!b) return;
   const t = curTour(), ds = b.dataset;
   switch (ds.act) {
-    case 'sel': P.data.sel = ds.id; P.tf = null; P.editName = false; commit(); break;
+    case 'tour-new': P.newTour = true; render(); $('#new-name').focus(); break;
+    case 'tour-new-cancel': P.newTour = false; render(); break;
     case 'add-tour': {
       const n = $('#new-name').value.trim(); if (!n) { toast('大会名を入れてください', 'err'); $('#new-name').focus(); return; }
-      const x = { id: uid(), name: n, a: '', b: '', games: [] }; P.data.tours.push(x); P.data.sel = x.id; P.tf = null; P.editName = false; commit('追加しました'); break;
+      const x = { id: uid(), name: n, a: '', b: '', games: [] }; P.data.tours.push(x); P.newTour = false; save(); location.hash = 't=' + encodeURIComponent(x.id); toast('追加しました'); break;
     }
     case 'name-edit': P.editName = true; render(); $('#tour-name').focus(); break;
     case 'name-cancel': P.editName = false; render(); break;
     case 'name-save': { const n = $('#tour-name').value.trim(); if (!n) { toast('大会名を入れてください', 'err'); return; } t.name = n; P.editName = false; commit('保存しました'); break; }
     case 'tour-del': twoStep(b, '本当に削除', () => {
-      P.data.tours = P.data.tours.filter(x => x.id !== t.id); P.data.sel = (P.data.tours[P.data.tours.length - 1] || {}).id || ''; P.tf = null; commit('削除しました');
+      P.data.tours = P.data.tours.filter(x => x.id !== t.id); P.tf = null; save(); location.hash = ''; toast('削除しました');
     }); break;
     case 'tf-seg': { const f = readTF(); f[ds.k] = f[ds.k] === ds.v ? '' : ds.v; fixType(f); render(); break; }
     case 'tf-edit': { const g = t.games.find(x => x.id === ds.g); if (!g) return; P.tf = { ...blankTF(), ...g }; render(); $('.form').scrollIntoView({ block: 'center' }); break; }
@@ -166,13 +187,15 @@ document.addEventListener('click', e => {
     case 'memo': { P.data.memo = !P.data.memo; save(); const tb = b.closest('table'); tb.classList.toggle('show-memo', P.data.memo); b.textContent = P.data.memo ? 'メモを隠す' : 'メモを表示'; break; }
     case 'img': saveImage(t); break;
     case 'deck-add': {
-      readTF(); const c = $('#nd-cls').value, n = $('#nd-name').value.trim();
+      const c = $('#nd-cls').value, n = $('#nd-name').value.trim();
       if (!c || !n) { toast('クラスとデッキ名を入れてください', 'err'); return; }
       if (liveDecks().some(d => String(d.cls) === c && d.name === n)) { toast('同じデッキがあります', 'err'); return; }
-      P.data.decks.push({ id: uid(), cls: c, name: n }); P.decksOpen = true; commit('追加しました'); break;
+      P.data.decks.push({ id: uid(), cls: c, name: n }); P.ndCls = c; commit('追加しました'); $('#nd-name').focus(); break;
+    }
+    case 'deck-mode': { P.deckMode = P.deckMode === ds.v ? '' : ds.v; render(); if (P.deckMode === 'add') $('#nd-name').focus(); break;
     }
     case 'deck-del': twoStep(b, '本当に削除', () => {
-      readTF(); const d = P.data.decks.find(x => x.id === ds.id); if (d) d.hidden = true; P.decksOpen = true; commit('削除しました');
+      const d = P.data.decks.find(x => x.id === ds.id); if (d) d.hidden = true; commit('削除しました');
     }); break;
   }
 });
@@ -181,7 +204,7 @@ document.addEventListener('change', e => {
   if (e.target.matches('#tf-o1, #tf-o2')) { const f = readTF(); fixType(f); render(); return; }
   if (e.target.matches('select.mine') && t) { readTF(); t[e.target.dataset.k] = e.target.value; commit(); }
 });
-document.addEventListener('toggle', e => { if (e.target.matches && e.target.matches('details.decks')) P.decksOpen = e.target.open; }, true);
+window.addEventListener('hashchange', () => { P.tf = null; P.editName = false; render(); window.scrollTo(0, 0); });
 document.addEventListener('keydown', e => {
   if (e.key !== 'Enter' || e.isComposing) return;
   if (e.target.id === 'new-name') $('[data-act="add-tour"]').click();
@@ -243,5 +266,5 @@ function saveImage(t) {
 }
 
 P.data = load();
-P.data.decks = P.data.decks || []; P.data.tours = P.data.tours || [];
+save();
 render();

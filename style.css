@@ -13,8 +13,8 @@
 * { box-sizing: border-box; }
 html, body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--font); font-size: 15px; line-height: 1.7; }
 .top { border-bottom: 1px solid var(--line); padding: 10px 16px; }
-.top h1 { max-width: 968px; margin: 0 auto; font-size: 18px; }
-main { max-width: 1000px; margin: 0 auto; padding: 16px; }
+.top h1 { max-width: 1068px; margin: 0 auto; font-size: 18px; }
+main { max-width: 1100px; margin: 0 auto; padding: 16px; }
 h2 { font-size: 17px; margin: 0; }
 section { margin-bottom: 24px; }
 .muted { color: var(--text-sub); }
@@ -28,10 +28,29 @@ select { min-width: 8em; max-width: 16em; }
 textarea { width: 100%; min-height: 3em; }
 .inline { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 
-.tours { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
-.tours .tour-tab { border: 1px solid var(--line-strong); background: #fff; border-radius: 6px; padding: 4px 12px; font: inherit; font-size: 14px; cursor: pointer; }
-.tours .tour-tab.on { border-color: var(--accent); color: var(--accent); font-weight: 600; background: #eef3fb; }
-.add-tour { margin-top: 10px; }
+.sec-head { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.sec-head h2 { margin-right: auto; }
+.btn.on { border-color: var(--accent); color: var(--accent); background: #eef3fb; }
+.add-box { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; padding: 10px 12px; margin-bottom: 12px; background: var(--bg-sub); border: 1px solid var(--line); border-radius: 8px; }
+.add-box input.text { flex: 1 1 14em; min-width: 0; }
+
+.tour-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; }
+.tour-card { display: flex; flex-direction: column; gap: 2px; padding: 12px 14px; border: 1px solid var(--line-strong); border-radius: 8px; color: var(--text); text-decoration: none; background: #fff; }
+.tour-card:hover { border-color: var(--accent); }
+.tc-name { font-weight: 700; }
+.tc-sub { font-size: 13px; color: var(--text-sub); }
+.back { display: inline-block; margin-bottom: 10px; font-size: 14px; color: var(--accent); text-decoration: none; }
+.back:hover { text-decoration: underline; }
+
+.cls-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 10px; }
+.cls-card { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; }
+.cls-card h3 { margin: 0 0 6px; padding-bottom: 4px; font-size: 14px; border-bottom: 1px solid var(--line); }
+.cls-card ul { list-style: none; margin: 0; padding: 0; }
+.cls-card li span { white-space: nowrap; }
+.cls-card li { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 2px 0; font-size: 14px; }
+.del-btn { border: 1px solid #e6b8b4; background: #fff; color: var(--lose); border-radius: 6px; padding: 0 8px; font: inherit; font-size: 12px; line-height: 1.8; cursor: pointer; white-space: nowrap; }
+.del-btn:hover { background: #fdf1f0; }
+.del-mode .cls-card { border-color: #e6b8b4; }
 
 .tour { border: 1px solid var(--line); border-radius: 8px; padding: 14px; }
 .tour-head { display: flex; flex-wrap: wrap; gap: 8px; align-items: baseline; margin-bottom: 8px; }
@@ -61,13 +80,6 @@ table.games.show-memo tr:has(+ tr.memo-row) td { border-bottom: 0; padding-botto
 .form { background: var(--bg-sub); border: 1px solid var(--line); border-radius: 8px; padding: 12px 16px; margin-top: 10px; }
 .form h3 { margin: 0 0 6px; font-size: 14px; }
 .actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 8px; }
-
-details.decks { border-top: 1px solid var(--line); padding-top: 12px; }
-details.decks summary { cursor: pointer; font-weight: 600; }
-.deck-cls { margin: 10px 0; }
-.deck-cls h4 { margin: 0 0 4px; font-size: 14px; }
-.deck-list { display: flex; flex-wrap: wrap; gap: 4px 14px; }
-.deck-list span { white-space: nowrap; }
 
 .empty { color: var(--text-sub); }
 .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #202122; color: #fff; padding: 8px 16px; border-radius: 6px; font-size: 14px; z-index: 10; }
